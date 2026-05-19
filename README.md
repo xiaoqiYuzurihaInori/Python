@@ -11,6 +11,7 @@
 当前已经提供一个可运行的 Jupyter Notebook：
 
 - [douban_top250_scraper.ipynb](/D:/AI/App01/notebooks/douban_top250_scraper.ipynb)
+- [douban_top250_analysis.ipynb](/D:/AI/App01/notebooks/douban_top250_analysis.ipynb)
 
 ## 项目状态
 
@@ -57,6 +58,7 @@ App01/
 ├─ .env.example
 ├─ .gitignore
 ├─ notebooks/
+│  ├─ douban_top250_analysis.ipynb
 │  ├─ douban_top250_scraper.ipynb
 │  └─ douban_top250_to_mysql.ipynb
 ├─ output/
@@ -64,7 +66,9 @@ App01/
 ├─ sql/
 │  └─ create_douban_top250_movies.sql
 ├─ src/
-│  └─ load_douban_top250_to_mysql.py
+│  ├─ load_douban_top250_to_mysql.py
+│  └─ run_dashboard.ps1
+├─ streamlit_app.py
 └─ README.md
 ```
 
@@ -73,13 +77,16 @@ App01/
 ```text
 App01/
 ├─ notebooks/
+│  ├─ douban_top250_analysis.ipynb
 │  ├─ douban_top250_scraper.ipynb
 │  └─ douban_top250_to_mysql.ipynb
 ├─ output/
 ├─ sql/
 │  └─ create_douban_top250_movies.sql
 ├─ src/
-│  └─ load_douban_top250_to_mysql.py
+│  ├─ load_douban_top250_to_mysql.py
+│  └─ run_dashboard.ps1
+├─ streamlit_app.py
 ├─ requirements.txt
 ├─ README.md
 └─ .gitignore
@@ -108,6 +115,8 @@ Notebook 中当前使用到的主要依赖：
 - `openpyxl`
 - `lxml`
 - `pymysql`
+- `plotly`
+- `streamlit`
 
 如果本地没有安装依赖，可以先安装：
 
@@ -253,6 +262,56 @@ df_movie_details = enrich_movie_details(df_movies, max_movies=5, detail_delay_ra
 - 评分分析图表
 - 热门电影排行图
 - 简单数据分析报告
+
+## Web 可视化看板
+
+项目已经提供一个可交互的 Web 看板：
+
+- [streamlit_app.py](/D:/AI/App01/streamlit_app.py)
+- [run_dashboard.ps1](/D:/AI/App01/src/run_dashboard.ps1)
+
+这套看板优先从 MySQL 读取数据，如果数据库连接失败，会自动回退到本地 CSV 文件：
+
+- `output/analysis/douban_top250_analysis.csv`
+- `output/douban_top250_movies_list.csv`
+
+### 功能特性
+
+- 侧边栏交互筛选
+- 排名范围筛选
+- 评分范围筛选
+- 最低评价人数筛选
+- 标题关键词搜索
+- 评分、热度、综合指数排序
+- Plotly 交互图表展示
+- 评分 Top10、热度 Top10、综合指数 Top10
+- 电影明细表格展示
+
+### 启动方式
+
+安装依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+直接运行：
+
+```bash
+streamlit run streamlit_app.py
+```
+
+或者使用项目自带 PowerShell 启动脚本：
+
+```powershell
+.\src\run_dashboard.ps1
+```
+
+这个脚本会自动选择可用的 Python 解释器，并使用 `python -m streamlit run` 的正确方式启动看板。
+
+启动后默认访问：
+
+- [http://localhost:8501](http://localhost:8501)
 
 ## 后续开发路线
 
