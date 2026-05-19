@@ -57,6 +57,7 @@
 App01/
 ├─ .env.example
 ├─ .gitignore
+├─ flask_app.py
 ├─ notebooks/
 │  ├─ douban_top250_analysis.ipynb
 │  ├─ douban_top250_scraper.ipynb
@@ -65,9 +66,14 @@ App01/
 ├─ requirements.txt
 ├─ sql/
 │  └─ create_douban_top250_movies.sql
+├─ static/
+│  └─ dashboard.css
 ├─ src/
 │  ├─ load_douban_top250_to_mysql.py
-│  └─ run_dashboard.ps1
+│  ├─ run_dashboard.ps1
+│  └─ run_flask_dashboard.ps1
+├─ templates/
+│  └─ dashboard.html
 ├─ streamlit_app.py
 └─ README.md
 ```
@@ -76,6 +82,7 @@ App01/
 
 ```text
 App01/
+├─ flask_app.py
 ├─ notebooks/
 │  ├─ douban_top250_analysis.ipynb
 │  ├─ douban_top250_scraper.ipynb
@@ -83,9 +90,14 @@ App01/
 ├─ output/
 ├─ sql/
 │  └─ create_douban_top250_movies.sql
+├─ static/
+│  └─ dashboard.css
 ├─ src/
 │  ├─ load_douban_top250_to_mysql.py
-│  └─ run_dashboard.ps1
+│  ├─ run_dashboard.ps1
+│  └─ run_flask_dashboard.ps1
+├─ templates/
+│  └─ dashboard.html
 ├─ streamlit_app.py
 ├─ requirements.txt
 ├─ README.md
@@ -117,6 +129,7 @@ Notebook 中当前使用到的主要依赖：
 - `pymysql`
 - `plotly`
 - `streamlit`
+- `flask`
 
 如果本地没有安装依赖，可以先安装：
 
@@ -270,10 +283,83 @@ df_movie_details = enrich_movie_details(df_movies, max_movies=5, detail_delay_ra
 - [streamlit_app.py](/D:/AI/App01/streamlit_app.py)
 - [run_dashboard.ps1](/D:/AI/App01/src/run_dashboard.ps1)
 
+### 启动方式速查
+
+#### Streamlit 版本
+
+直接命令：
+
+```bash
+streamlit run streamlit_app.py
+```
+
+如果你使用 Anaconda，也可以这样启动：
+
+```powershell
+D:/Anaconda/python.exe -m streamlit run D:/AI/App01/streamlit_app.py
+```
+
+项目脚本：
+
+```powershell
+.\src\run_dashboard.ps1
+```
+
+默认地址：
+
+- [http://localhost:8501](http://localhost:8501)
+
 这套看板优先从 MySQL 读取数据，如果数据库连接失败，会自动回退到本地 CSV 文件：
 
 - `output/analysis/douban_top250_analysis.csv`
 - `output/douban_top250_movies_list.csv`
+
+### Flask + ECharts 版本
+
+除了 Streamlit 版，这个项目现在还额外提供了一个 `Flask + ECharts` 网页版本：
+
+- [flask_app.py](/D:/AI/App01/flask_app.py)
+- [dashboard.html](/D:/AI/App01/templates/dashboard.html)
+- [dashboard.css](/D:/AI/App01/static/dashboard.css)
+- [run_flask_dashboard.ps1](/D:/AI/App01/src/run_flask_dashboard.ps1)
+
+这套版本更接近传统 Web 项目，特点是：
+
+- Flask 提供页面和数据接口
+- ECharts 负责图表渲染
+- 前端通过接口实时筛选与刷新
+- 保留榜单、明细表、评分分布、热度关系等交互能力
+
+主要交互包括：
+
+- 排名范围筛选
+- 评分范围筛选
+- 最低评价人数筛选
+- 标题关键词搜索
+- 排序字段和排序方向切换
+- 评分 Top10 / 热度 Top10 / 综合指数 Top10 标签页切换
+
+启动方式：
+
+```bash
+python flask_app.py
+```
+
+如果你使用 Anaconda，也可以这样启动：
+
+```powershell
+D:/Anaconda/python.exe D:/AI/App01/flask_app.py
+```
+
+或者使用 PowerShell 启动脚本：
+
+```powershell
+.\src\run_flask_dashboard.ps1
+```
+
+启动后默认访问：
+
+- [http://localhost:5000](http://localhost:5000)
 
 ### 功能特性
 

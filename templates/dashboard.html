@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豆瓣 Top250 电影可视化看板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <aside class="sidebar">
+            <div class="sidebar-card brand-card">
+                <p class="eyebrow">Flask + ECharts</p>
+                <h1>豆瓣 Top250 电影看板</h1>
+                <p class="muted">更像正式网站的交互式展示层。保留 Streamlit 的同时，这里提供一套前后端分离风格更强的可视化体验。</p>
+            </div>
+
+            <form id="filter-form" class="sidebar-card filter-card">
+                <div class="form-group">
+                    <label for="rank_min">排名范围</label>
+                    <div class="double-input">
+                        <input type="number" id="rank_min" name="rank_min" value="{{ filters.rank_min }}" min="{{ filters.rank_min }}" max="{{ filters.rank_max }}">
+                        <input type="number" id="rank_max" name="rank_max" value="{{ filters.rank_max }}" min="{{ filters.rank_min }}" max="{{ filters.rank_max }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="rating_min">评分范围</label>
+                    <div class="double-input">
+                        <input type="number" id="rating_min" name="rating_min" value="{{ filters.rating_min }}" min="{{ filters.rating_min }}" max="{{ filters.rating_max }}" step="0.1">
+                        <input type="number" id="rating_max" name="rating_max" value="{{ filters.rating_max }}" min="{{ filters.rating_min }}" max="{{ filters.rating_max }}" step="0.1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="min_votes">最低评价人数</label>
+                    <input type="number" id="min_votes" name="min_votes" value="{{ filters.min_votes }}" min="0" step="10000">
+                </div>
+
+                <div class="form-group">
+                    <label for="keyword">标题关键词</label>
+                    <input type="text" id="keyword" name="keyword" placeholder="例如：人生 / 星际 / 世界">
+                </div>
+
+                <div class="form-group">
+                    <label for="sort_by">排序字段</label>
+                    <select id="sort_by" name="sort_by">
+                        <option value="movie_rank">排名</option>
+                        <option value="rating">评分</option>
+                        <option value="rating_count">评价人数</option>
+                        <option value="score_index">综合指数</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sort_dir">排序方向</label>
+                    <select id="sort_dir" name="sort_dir">
+                        <option value="asc">升序</option>
+                        <option value="desc">降序</option>
+                    </select>
+                </div>
+
+                <div class="button-row">
+                    <button type="submit" class="primary-btn">更新看板</button>
+                    <button type="button" class="ghost-btn" id="reset-btn">重置筛选</button>
+                </div>
+            </form>
+        </aside>
+
+        <main class="content">
+            <section class="hero-card">
+                <div>
+                    <p class="eyebrow">Interactive Dashboard</p>
+                    <h2>用更完整的 Web 页面方式浏览 Top250</h2>
+                    <p class="hero-copy">通过筛选、排序、榜单和图表联动，快速观察排名、评分与评价热度之间的关系，并查看短评内容与电影明细。</p>
+                </div>
+                <div class="hero-meta">
+                    <span>数据来源：<strong id="source-text">{{ payload.source }}</strong></span>
+                    <span>数据采集：<strong id="latest-crawl">{{ payload.summary.latest_crawl }}</strong></span>
+                    <span>页面刷新：<strong id="page-refresh-time"></strong></span>
+                </div>
+            </section>
+
+            <section class="metrics-grid">
+                <article class="metric-card">
+                    <span class="metric-label">电影数量</span>
+                    <strong id="metric-count">{{ payload.summary.count }}</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">平均评分</span>
+                    <strong id="metric-rating">{{ payload.summary.avg_rating }}</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">平均评价人数</span>
+                    <strong id="metric-votes">{{ payload.summary.avg_votes }}</strong>
+                </article>
+                <article class="metric-card">
+                    <span class="metric-label">高分代表</span>
+                    <strong id="metric-top-movie">{{ payload.summary.max_rating_movie }}</strong>
+                </article>
+            </section>
+
+            <section class="quote-grid">
+                <article class="quote-card">
+                    <p class="card-title">高分代表</p>
+                    <h3 id="top-movie-title">{{ payload.summary.top_movie.title_cn }}</h3>
+                    <p id="top-movie-meta">评分 {{ payload.summary.top_movie.rating }} · 评价人数 {{ payload.summary.top_movie.rating_count }}</p>
+                    <blockquote id="top-movie-quote">{{ payload.summary.top_movie.quote_text }}</blockquote>
+                </article>
+                <article class="quote-card alt">
+                    <p class="card-title">热度代表</p>
+                    <h3 id="popular-movie-title">{{ payload.summary.popular_movie.title_cn }}</h3>
+                    <p id="popular-movie-meta">评分 {{ payload.summary.popular_movie.rating }} · 评价人数 {{ payload.summary.popular_movie.rating_count }}</p>
+                    <blockquote id="popular-movie-quote">{{ payload.summary.popular_movie.quote_text }}</blockquote>
+                </article>
+            </section>
+
+            <section class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>评分分布</h3>
+                        <p>观察 Top250 的评分密集区间</p>
+                    </div>
+                    <div id="rating-hist-chart" class="chart-box"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>评分区间分布</h3>
+                        <p>按评分档位观察电影数量</p>
+                    </div>
+                    <div id="rating-bin-chart" class="chart-box"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>排名与评分关系</h3>
+                        <p>气泡大小代表评价人数</p>
+                    </div>
+                    <div id="rank-rating-chart" class="chart-box"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-head">
+                        <h3>评分与热度关系</h3>
+                        <p>观察高分与大众热度的交集</p>
+                    </div>
+                    <div id="rating-popularity-chart" class="chart-box"></div>
+                </div>
+            </section>
+
+            <section class="tabs-card">
+                <div class="tabs-bar">
+                    <button class="tab-btn active" data-target="tab-rating">评分 Top10</button>
+                    <button class="tab-btn" data-target="tab-popular">热度 Top10</button>
+                    <button class="tab-btn" data-target="tab-score">综合指数 Top10</button>
+                </div>
+                <div class="tab-panel active" id="tab-rating">
+                    <div class="table-wrap"><table id="table-top-rating"></table></div>
+                </div>
+                <div class="tab-panel" id="tab-popular">
+                    <div class="table-wrap"><table id="table-top-popular"></table></div>
+                    <div id="top-popular-chart" class="chart-box compact"></div>
+                </div>
+                <div class="tab-panel" id="tab-score">
+                    <div class="table-wrap"><table id="table-top-score"></table></div>
+                </div>
+            </section>
+
+            <section class="table-card">
+                <div class="chart-head">
+                    <h3>电影明细</h3>
+                    <p>展示当前筛选条件下的前 120 条结果</p>
+                </div>
+                <div class="table-wrap full">
+                    <table id="movies-table"></table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const initialPayload = {{ payload|tojson }};
+    </script>
+    <script>
+        const charts = {
+            ratingHist: echarts.init(document.getElementById('rating-hist-chart')),
+            ratingBin: echarts.init(document.getElementById('rating-bin-chart')),
+            rankRating: echarts.init(document.getElementById('rank-rating-chart')),
+            ratingPopularity: echarts.init(document.getElementById('rating-popularity-chart')),
+            topPopular: echarts.init(document.getElementById('top-popular-chart')),
+        };
+
+        function setText(id, value) {
+            document.getElementById(id).textContent = value ?? '';
+        }
+
+        function formatNumber(value) {
+            if (value === null || value === undefined) return '-';
+            return new Intl.NumberFormat('zh-CN').format(value);
+        }
+
+        function getCurrentTimestamp() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function renderSummary(payload) {
+            setText('source-text', payload.source);
+            setText('latest-crawl', payload.summary.latest_crawl);
+            setText('page-refresh-time', getCurrentTimestamp());
+            setText('metric-count', payload.summary.count);
+            setText('metric-rating', payload.summary.avg_rating);
+            setText('metric-votes', payload.summary.avg_votes);
+            setText('metric-top-movie', payload.summary.max_rating_movie);
+
+            setText('top-movie-title', payload.summary.top_movie.title_cn);
+            setText('top-movie-meta', `评分 ${payload.summary.top_movie.rating} · 评价人数 ${payload.summary.top_movie.rating_count}`);
+            setText('top-movie-quote', payload.summary.top_movie.quote_text);
+
+            setText('popular-movie-title', payload.summary.popular_movie.title_cn);
+            setText('popular-movie-meta', `评分 ${payload.summary.popular_movie.rating} · 评价人数 ${payload.summary.popular_movie.rating_count}`);
+            setText('popular-movie-quote', payload.summary.popular_movie.quote_text);
+        }
+
+        function renderTable(tableId, columns, rows) {
+            const table = document.getElementById(tableId);
+            const head = `<thead><tr>${columns.map(col => `<th>${col.label}</th>`).join('')}</tr></thead>`;
+            const body = rows.map(row => {
+                return `<tr>${columns.map(col => `<td>${col.render ? col.render(row[col.key], row) : (row[col.key] ?? '')}</td>`).join('')}</tr>`;
+            }).join('');
+            table.innerHTML = `${head}<tbody>${body}</tbody>`;
+        }
+
+        function renderCharts(payload) {
+            charts.ratingHist.setOption({
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'value', name: '评分' },
+                yAxis: { type: 'value', name: '电影数量' },
+                series: [{
+                    type: 'bar',
+                    data: buildHistogramBins(payload.charts.rating_hist.x, 12),
+                    itemStyle: { color: '#d97706', borderRadius: [8, 8, 0, 0] },
+                }],
+                grid: { left: 45, right: 18, top: 30, bottom: 40 }
+            });
+
+            charts.ratingBin.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: payload.charts.rating_bins.x },
+                yAxis: { type: 'value', name: '电影数量' },
+                series: [{
+                    type: 'bar',
+                    data: payload.charts.rating_bins.y,
+                    itemStyle: { color: '#4d7c0f', borderRadius: [8, 8, 0, 0] },
+                }],
+                grid: { left: 45, right: 18, top: 30, bottom: 40 }
+            });
+
+            charts.rankRating.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    formatter: params => `${params.data.name}<br>排名：${params.data.value[0]}<br>评分：${params.data.value[1]}<br>评价人数：${formatNumber(params.data.value[2])}`
+                },
+                xAxis: { type: 'value', inverse: true, name: '排名' },
+                yAxis: { type: 'value', name: '评分' },
+                visualMap: {
+                    min: 8.0,
+                    max: 9.7,
+                    dimension: 1,
+                    orient: 'horizontal',
+                    left: 'center',
+                    bottom: 0,
+                    inRange: { color: ['#38bdf8', '#0f766e', '#14532d'] }
+                },
+                series: [{
+                    type: 'scatter',
+                    data: payload.charts.rank_rating,
+                    symbolSize: value => Math.min(48, Math.max(6, Math.sqrt(value[2]) / 42)),
+                }],
+                grid: { left: 45, right: 18, top: 30, bottom: 70 }
+            });
+
+            charts.ratingPopularity.setOption({
+                tooltip: {
+                    trigger: 'item',
+                    formatter: params => `${params.data.name}<br>评分：${params.data.value[0]}<br>评价人数：${formatNumber(params.data.value[2])}<br>排名：${params.data.value[3]}`
+                },
+                xAxis: { type: 'value', name: '评分' },
+                yAxis: { type: 'value', name: '评价人数（万）' },
+                series: [{
+                    type: 'scatter',
+                    data: payload.charts.rating_popularity,
+                    symbolSize: value => Math.min(48, Math.max(6, Math.sqrt(value[2]) / 42)),
+                    itemStyle: { color: '#7c3aed', opacity: 0.58 }
+                }],
+                grid: { left: 55, right: 18, top: 30, bottom: 40 }
+            });
+
+            charts.topPopular.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'value', name: '评价人数（万）' },
+                yAxis: { type: 'category', data: payload.charts.top_popular.y },
+                series: [{
+                    type: 'bar',
+                    data: payload.charts.top_popular.x,
+                    itemStyle: { color: '#2563eb', borderRadius: [0, 8, 8, 0] },
+                }],
+                grid: { left: 110, right: 18, top: 30, bottom: 40 }
+            });
+        }
+
+        function buildHistogramBins(values, binCount) {
+            if (!values.length) return [];
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const step = (max - min) / binCount || 0.1;
+            const bins = [];
+            for (let i = 0; i < binCount; i += 1) {
+                const start = min + i * step;
+                const end = i === binCount - 1 ? max + 0.001 : start + step;
+                const count = values.filter(v => v >= start && v < end).length;
+                bins.push([Number(start.toFixed(2)), count]);
+            }
+            return bins;
+        }
+
+        function renderRankings(payload) {
+            renderTable('table-top-rating', [
+                { key: 'movie_rank', label: '排名' },
+                { key: 'title_cn', label: '电影' },
+                { key: 'rating', label: '评分' },
+                { key: 'rating_count', label: '评价人数', render: value => formatNumber(value) },
+                { key: 'quote_text', label: '短评' },
+            ], payload.rankings.top_rating);
+
+            renderTable('table-top-popular', [
+                { key: 'movie_rank', label: '排名' },
+                { key: 'title_cn', label: '电影' },
+                { key: 'rating', label: '评分' },
+                { key: 'rating_count', label: '评价人数', render: value => formatNumber(value) },
+                { key: 'quote_text', label: '短评' },
+            ], payload.rankings.top_popular);
+
+            renderTable('table-top-score', [
+                { key: 'movie_rank', label: '排名' },
+                { key: 'title_cn', label: '电影' },
+                { key: 'rating', label: '评分' },
+                { key: 'rating_count', label: '评价人数', render: value => formatNumber(value) },
+                { key: 'score_index', label: '综合指数' },
+                { key: 'quote_text', label: '短评' },
+            ], payload.rankings.top_score);
+        }
+
+        function renderMovieTable(payload) {
+            renderTable('movies-table', [
+                { key: 'movie_rank', label: '排名' },
+                { key: 'title_cn', label: '中文名' },
+                { key: 'title_other', label: '外文名 / 别名' },
+                { key: 'rating', label: '评分' },
+                { key: 'rating_count_text', label: '评价人数' },
+                { key: 'quote_text', label: '短评' },
+                { key: 'detail_url', label: '详情页', render: value => value ? `<a href="${value}" target="_blank" rel="noreferrer">打开</a>` : '' },
+                { key: 'crawl_time', label: '采集时间' },
+            ], payload.table_rows);
+        }
+
+        function renderDashboard(payload) {
+            renderSummary(payload);
+            renderCharts(payload);
+            renderRankings(payload);
+            renderMovieTable(payload);
+        }
+
+        async function fetchDashboard() {
+            const form = document.getElementById('filter-form');
+            const formData = new FormData(form);
+            const search = new URLSearchParams(formData);
+            const response = await fetch(`/api/dashboard?${search.toString()}`);
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error || '加载失败');
+            }
+            return response.json();
+        }
+
+        document.getElementById('filter-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submitBtn = event.target.querySelector('.primary-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '加载中...';
+            try {
+                const payload = await fetchDashboard();
+                renderDashboard(payload);
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '更新看板';
+            }
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            document.getElementById('filter-form').reset();
+            renderDashboard(initialPayload);
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.target).classList.add('active');
+                Object.values(charts).forEach(chart => chart.resize());
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            Object.values(charts).forEach(chart => chart.resize());
+        });
+
+        renderDashboard(initialPayload);
+    </script>
+</body>
+</html>
