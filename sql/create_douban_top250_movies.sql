@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS douban_top250_movies (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+    movie_rank INT NOT NULL COMMENT '榜单排名',
+    title_cn VARCHAR(255) NOT NULL COMMENT '中文标题',
+    title_other VARCHAR(500) NULL COMMENT '外文标题或别名',
+    rating DECIMAL(3,1) NULL COMMENT '豆瓣评分',
+    rating_count INT NULL COMMENT '评价人数',
+    quote_text VARCHAR(1000) NULL COMMENT '短评摘录',
+    detail_url VARCHAR(500) NULL COMMENT '详情页链接',
+    poster_url VARCHAR(500) NULL COMMENT '海报链接',
+    crawl_time DATETIME NULL COMMENT '采集时间',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_detail_url (detail_url),
+    UNIQUE KEY uk_movie_rank (movie_rank),
+    KEY idx_rating (rating),
+    KEY idx_rating_count (rating_count),
+    KEY idx_crawl_time (crawl_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='豆瓣 Top250 电影列表数据';

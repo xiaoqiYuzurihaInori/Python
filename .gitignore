@@ -1,0 +1,10 @@
+output/
+__pycache__/
+.ipynb_checkpoints/
+.env
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+*.bak
