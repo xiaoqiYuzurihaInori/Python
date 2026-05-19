@@ -10,7 +10,7 @@
 
 当前已经提供一个可运行的 Jupyter Notebook：
 
-- [douban_top250_scraper.ipynb](/D:/AI/App01/douban_top250_scraper.ipynb)
+- [douban_top250_scraper.ipynb](/D:/AI/App01/notebooks/douban_top250_scraper.ipynb)
 
 ## 项目状态
 
@@ -56,7 +56,9 @@
 App01/
 ├─ .env.example
 ├─ .gitignore
-├─ douban_top250_scraper.ipynb
+├─ notebooks/
+│  ├─ douban_top250_scraper.ipynb
+│  └─ douban_top250_to_mysql.ipynb
 ├─ output/
 ├─ requirements.txt
 ├─ sql/
@@ -66,15 +68,19 @@ App01/
 └─ README.md
 ```
 
-后续建议逐步扩展为：
+当前结构已经按职责拆分为：
 
 ```text
 App01/
 ├─ notebooks/
-├─ data/
+│  ├─ douban_top250_scraper.ipynb
+│  └─ douban_top250_to_mysql.ipynb
 ├─ output/
 ├─ sql/
+│  └─ create_douban_top250_movies.sql
 ├─ src/
+│  └─ load_douban_top250_to_mysql.py
+├─ requirements.txt
 ├─ README.md
 └─ .gitignore
 ```
@@ -115,7 +121,7 @@ pip install -r requirements.txt
 
 打开：
 
-- [douban_top250_scraper.ipynb](/D:/AI/App01/douban_top250_scraper.ipynb)
+- [douban_top250_scraper.ipynb](/D:/AI/App01/notebooks/douban_top250_scraper.ipynb)
 
 按顺序运行各个单元。
 
@@ -142,6 +148,7 @@ df_movies = crawl_douban_top250_list_only()
 
 - [create_douban_top250_movies.sql](/D:/AI/App01/sql/create_douban_top250_movies.sql)
 - [load_douban_top250_to_mysql.py](/D:/AI/App01/src/load_douban_top250_to_mysql.py)
+- [douban_top250_to_mysql.ipynb](/D:/AI/App01/notebooks/douban_top250_to_mysql.ipynb)
 
 ### 1. 安装依赖
 
@@ -302,6 +309,7 @@ df_movie_details = enrich_movie_details(df_movies, max_movies=5, detail_delay_ra
 ## 当前已完成内容
 
 - 完成 Top250 列表页采集 Notebook
+- 将采集与入库 Notebook 统一整理到 `notebooks/` 目录
 - 支持导出 CSV / Excel
 - 支持详情页字段增强函数
 - 增加了限流场景下的等待与重试逻辑
